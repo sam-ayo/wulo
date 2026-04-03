@@ -20,13 +20,22 @@ Execute these steps sequentially when scaffolding a new backend project:
    - Check for existing projects: `neonctl projects list --output json`
    - If no matching project exists, create one: `neonctl projects create --name <project_name> --region-id aws-us-east-2 --output json` (derive the name from the repo/folder name, stripping `-server`/`-backend` suffixes)
    - Get the pooled connection string: `neonctl connection-string --project-id <project_id> --pooled --output json`
-   - Write `DATABASE_URL` to the project's `.env` file
+   - Write `DATABASE_URL` to the project's `.env` file — replace `sslmode=require` with `sslmode=verify-full` in the connection string to avoid the `pg` driver deprecation warning
    - Verify the connection is live
    - See `references/setup-database-infra.md` for full details
-5. **Generate and apply initial migrations** if feature modules were requested.
-6. **Verify the project compiles** with `tsc --noEmit`.
-
-## Tech Stack
+5. **Set up Firebase infrastructure** — this is NOT optional. Firebase Auth is required for the backend:
+   - **Install gcloud CLI if missing:** Run `which gcloud` first. If not found, install it with `brew install --cask google-cloud-sdk` and verify with `gcloud --version`
+   - **Install Firebase CLI if missing:** Run `which firebase` first. If not found, install it with `npm install -g firebase-tools` and verify with `firebase --version`
+   - **Authenticate if needed:** Run `gcloud auth login` and `firebase login` if not already authenticated
+   - Check if `FIREBASE_SERVICE_ACCOUNT_PATH` already exists in `.env` and the file it points to exists — if so, skip to scaffolding
+   - If no service account exists, use `gcloud` to create the key file: `gcloud iam service-accounts keys create firebase-service-account.json --iam-account <service-account-email> --project=<project-id>` — do NOT use the Firebase Console, always use `gcloud`
+   - Write `FIREBASE_SERVICE_ACCOUNT_PATH` to the project's `.env` file with the correct relative path to the generated key file
+   - Scaffold the Firebase Admin singleton at `src/services/firebase.ts` and the auth middleware at `src/auth.ts`
+   - Ensure the service account JSON file is listed in `.gitignore`
+   - See `references/setup-firebase-infra.md` for full details
+6. **Generate and apply initial migrations** if feature modules were requested.
+7. **Verify the project compiles** with `tsc --noEmit`.
+8. **Enable auth providers and redirect the user** — this is the final step, only after everything else is done. Deploy anonymous auth by writing a temporary `firebase.json` with `{"auth":{"providers":{"anonymous":true}}}`, running `firebase deploy --only auth --project=<project-id>`, then deleting `firebase.json` and `.firebaserc`. Then open the browser to `https://console.firebase.google.com/project/<project-id>/authentication/providers` so the user can enable Google and Apple sign-in manually. See `references/setup-firebase-infra.md` step 8 for full details.
 
 ## Tech Stack
 
@@ -40,6 +49,36 @@ Execute these steps sequentially when scaffolding a new backend project:
 - **Logging:** Winston + `winston-console-format` for colorized dev output
 - **Build:** `tsc` for production, `tsx watch` for dev
 - **Package manager:** pnpm
+
+## TypeScript Configuration
+
+Use the official `@tsconfig/node22` base from the [`tsconfig/bases`](https://github.com/tsconfig/bases) repository. This is the TypeScript-recommended approach for Node.js apps.
+
+1. **Install the base config** as a dev dependency:
+   ```bash
+   pnpm add -D @tsconfig/node22
+   ```
+
+2. **Create `tsconfig.json`** extending the base — only add project-specific options:
+   ```json
+   {
+     "extends": "@tsconfig/node22/tsconfig.json",
+     "compilerOptions": {
+       "outDir": "./dist",
+       "rootDir": "./src",
+       "resolveJsonModule": true,
+       "sourceMap": true
+     },
+     "include": ["src/**/*"],
+     "exclude": ["node_modules", "dist"]
+   }
+   ```
+
+   The base already provides: `strict`, `esModuleInterop`, `skipLibCheck`, `module` (`nodenext`), `moduleResolution` (`node16`), `target` (`es2022`), and `lib` (`es2024` + ESNext iterators/collections). Do NOT duplicate these.
+
+3. **Add `"type": "module"` to `package.json`** — the base sets `"module": "nodenext"`, which requires ESM. All source files use native `import`/`export`.
+
+4. **Do NOT add `declaration` or `declarationMap`** — these are apps, not libraries. Enabling declaration emit causes TS2883 portability errors in TypeScript 5.5+ when inferred types reference deep `node_modules` paths (e.g. Drizzle's `PgColumn`, Express's `Router`).
 
 ## Project Structure
 
