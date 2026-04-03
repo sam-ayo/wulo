@@ -44,6 +44,7 @@ Execute these steps sequentially when scaffolding a new backend project:
 - **Database:** PostgreSQL
 - **ORM:** Drizzle ORM (`drizzle-orm` + `drizzle-kit` for migrations)
 - **Authentication:** Firebase Auth (Bearer token verification via `firebase-admin`)
+- **AI:** Vercel AI SDK (`ai`) — always install the latest version at the time of setup. Use provider adapters (e.g. `@ai-sdk/openai`, `@ai-sdk/anthropic`) to create model instances directly — do NOT use the Vercel AI Gateway
 - **Validation:** Zod schemas with a reusable `validate()` middleware
 - **Environment config:** `dotenv` + `envalid` for strict env var validation
 - **Logging:** Winston + `winston-console-format` for colorized dev output
