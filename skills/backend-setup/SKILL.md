@@ -1,5 +1,3 @@
-
-
 ---
 name: backend-setup
 description: Scaffold a new Node.js/Express/TypeScript backend with PostgreSQL, Drizzle ORM, Firebase Auth, and feature-module architecture

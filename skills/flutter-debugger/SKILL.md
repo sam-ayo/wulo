@@ -1,5 +1,5 @@
 ---
-name: debugger
+name: flutter-debugger
 description: Help debug code
 ---
 
