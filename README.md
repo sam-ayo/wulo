@@ -6,7 +6,7 @@
 
 ### [flutter-debugger](skills/flutter-debugger)
 
-A structured debugging workflow that routes all debug logging through a local HTTP instrumentation server instead of console/stdout. Includes a Dart-based log server (`debug_log_server.dart`) that receives structured JSON logs over HTTP and prints them to the terminal with color formatting. Designed to keep debug output centralized and easy to follow regardless of platform.
+A structured debugging workflow that routes all debug logging through a local HTTP instrumentation server instead of console/stdout. Includes a Dart-based log server (`debug_log_server.dart`) that receives structured JSON logs over HTTP and prints them to the terminal with color formatting. Designed to keep debug output centralized
 
 ### [backend-stack](skills/backend-stack)
 
