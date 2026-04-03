@@ -1,3 +1,5 @@
+
+
 ---
 name: backend-setup
 description: Scaffold a new Node.js/Express/TypeScript backend with PostgreSQL, Drizzle ORM, Firebase Auth, and feature-module architecture
@@ -5,7 +7,28 @@ description: Scaffold a new Node.js/Express/TypeScript backend with PostgreSQL, 
 
 # Backend Setup
 
-When asked to set up or scaffold a new backend, use the following tech stack and architecture.
+When asked to set up or scaffold a new backend, follow the **Scaffolding Steps** below in order. Every step is mandatory — do not skip any.
+
+## Scaffolding Steps
+
+Execute these steps sequentially when scaffolding a new backend project:
+
+1. **Create the project directory** and initialize with `pnpm init`.
+2. **Install all dependencies** (see Tech Stack below).
+3. **Scaffold the source files** following the Project Structure and Architecture Rules below.
+4. **Provision the Neon database** — this is NOT optional. You MUST use the Neon CLI (`neonctl`) — do NOT fall back to MCP tools:
+   - **Install neonctl if missing:** Run `which neonctl` first. If the command is not found, install it with `npm install -g neonctl` and verify with `neonctl --version`
+   - **Authenticate if needed:** Run `neonctl projects list --output json`. If authentication fails, run `neonctl auth` to open the browser login flow and wait for the user to complete it before continuing
+   - Check for existing projects: `neonctl projects list --output json`
+   - If no matching project exists, create one: `neonctl projects create --name <project_name> --region-id aws-us-east-2 --output json` (derive the name from the repo/folder name, stripping `-server`/`-backend` suffixes)
+   - Get the pooled connection string: `neonctl connection-string --project-id <project_id> --pooled --output json`
+   - Write `DATABASE_URL` to the project's `.env` file
+   - Verify the connection is live
+   - See `references/setup-database-infra.md` for full details
+5. **Generate and apply initial migrations** if feature modules were requested.
+6. **Verify the project compiles** with `tsc --noEmit`.
+
+## Tech Stack
 
 ## Tech Stack
 
@@ -43,7 +66,7 @@ src/
 ├── env_config.ts                  # envalid environment validation
 ├── request_validation.ts          # Zod validation middleware
 ├── api.routes.ts                  # Route aggregation
-└── app.ts                         # Express app entry point
+└── app.ts                         # Express app entry point (runs migrations, then listens)
 ```
 
 ## Architecture Rules
@@ -289,10 +312,26 @@ export const validateParams =
 ```
 
 ### Database
+
+#### Neon Database Provisioning
+When scaffolding the project, **always create a Neon PostgreSQL database** as part of the setup. You MUST use the Neon CLI (`neonctl`) — do NOT use MCP tools as a fallback.
+
+1. **Ensure neonctl is installed:** Run `which neonctl`. If not found, run `npm install -g neonctl` and verify with `neonctl --version`.
+2. **Ensure the user is authenticated:** Run `neonctl projects list --output json`. If it fails with an auth error, run `neonctl auth` to open the browser login flow. Wait for the user to complete login before continuing.
+3. **Check for existing projects:** `neonctl projects list --output json` — skip creation if one already matches.
+4. **Create the Neon project:** `neonctl projects create --name <project_name> --region-id aws-us-east-2 --output json`. Derive the project name from the repo/folder name, stripping `-server`/`-backend` suffixes.
+5. **Get the pooled connection string:** `neonctl connection-string --project-id <project_id> --pooled --output json`.
+6. **Write `DATABASE_URL`** to the project's `.env` file.
+7. **Verify the connection** is live before finishing.
+
+Do NOT skip database creation or defer it to the user. Do NOT fall back to MCP tools if neonctl is missing — install it instead. The scaffolded project should be immediately runnable with a live database.
+
+#### Drizzle ORM Setup
 - One Drizzle table schema per feature in `<feature>.schema.ts` using `pgTable()`
 - All schemas re-exported from `src/database/schema.ts`
-- Drizzle client (`db`) exported from `src/database/index.ts` using `drizzle(pool, { schema })`
-- Use `drizzle-kit generate` for migrations, `drizzle-kit migrate` to apply
+- Drizzle client (`db`) and `runMigrations()` exported from `src/database/index.ts`
+- `runMigrations()` uses `drizzle-orm/node-postgres/migrator` and is called before the server starts listening — migrations are applied automatically on startup, no need to run `drizzle-kit migrate` manually
+- Use `drizzle-kit generate` after schema changes to create migration files
 - Add a `drizzle.config.ts` at project root
 - Use Drizzle relational queries (`db.query.<table>`) for reads and `db.insert()` / `db.update()` / `db.delete()` for writes
 
